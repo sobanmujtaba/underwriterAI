@@ -1,0 +1,22 @@
+LOAN APPLICATION (FORM 1003)
+Borrower Name: Jane Doe
+Stated Base Monthly Income: $8,500.00
+Stated Bonus Income: $1,200.00 / month
+Proposed Housing Expense (PITI): $2,100.00
+
+LIABILITIES & OBLIGATIONS
+Auto Loan Payment: $450.00
+Student Loan Payment: $300.00
+Credit Card Minimum: $500.00
+Total Non-Housing Obligations: $1,250.00
+Total Stated Monthly Obligations: $3,350.00
+
+PAYSTUB / W-2 EARNINGS
+Employer: Apex Systems Inc.
+Pay Frequency: Semi-Monthly
+Actual Base Pay Rate: $4,000.00 ($8,000.00 monthly base)
+Bonus Documentation: Missing 2-year prior history; only 3 months recorded.
+
+ASSET ACTIVITY & RESERVES
+Checking Account Balance: $45,000.00
+Recent Large Deposit: $15,000.00 (Unverified deposit, missing transfer or source statement)
