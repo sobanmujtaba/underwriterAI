@@ -1,100 +1,141 @@
 # UnderwriteOS — AI Mortgage Underwriting Assistant
 
-**UnderwriteOS** is an agentic decision-support system designed to reduce mortgage underwriting review time.
+**UnderwriteOS** is an agentic mortgage underwriting decision-support system designed to streamline the review of multi-document borrower loan packages.
 
-The platform processes multi-document borrower loan packages, extracts and reconciles financial facts, retrieves applicable underwriting guidelines using RAG, delegates financial calculations to a deterministic Python engine, and generates evidence-backed draft underwriting conditions.
+The system combines document processing, guideline retrieval, deterministic financial calculations, discrepancy detection, and LLM-assisted underwriting analysis to produce evidence-backed findings and draft underwriting conditions.
 
 > **Human-in-the-Loop Safeguard**
 >
-> UnderwriteOS provides **decision-support findings and actionable underwriting conditions**. It does **not** issue final loan approvals, binding denials, adverse action notices, or automated clear-to-close decisions. Final underwriting decisions remain with a qualified human underwriter.
+> UnderwriteOS is a **decision-support system**, not an autonomous lending decision-maker. It does not issue final loan approvals, binding denials, adverse action notices, or automated clear-to-close decisions. Final underwriting decisions remain with a qualified human underwriter.
 
 ---
 
-## Architecture & Workflow
+## Overview
+
+Mortgage underwriting often requires reviewing information spread across multiple documents, including applications, paystubs, W-2s, bank statements and credit information.
+
+UnderwriteOS brings these tasks into a single workflow:
+
+1. Ingest borrower documentation.
+2. Extract and reconcile relevant financial facts.
+3. Retrieve applicable underwriting guidelines using RAG.
+4. Perform financial calculations using deterministic Python logic.
+5. Identify discrepancies and documentation gaps.
+6. Generate evidence-backed underwriting findings.
+7. Produce draft conditions for human review.
+
+The architecture intentionally separates **LLM reasoning from deterministic financial calculations** to improve reliability and traceability.
+
+---
+
+## Architecture
 
 ```text
-┌─────────────────────────────────────────────────────────────┐
-│              Borrower Loan Package Upload                  │
-│                  ZIP / Multiple Files                      │
-└─────────────────────────────┬───────────────────────────────┘
-                              │
-                              ▼
-┌─────────────────────────────────────────────────────────────┐
-│              1. Document Review Processing                  │
-│       Ingestion • Normalisation • Fact Extraction           │
-└─────────────────────────────┬───────────────────────────────┘
-                              │
-                 ┌────────────┴────────────┐
-                 │                         │
-                 ▼                         ▼
-┌────────────────────────────┐  ┌────────────────────────────┐
-│ 2. Guideline RAG           │  │ 3. Calculation Engine     │
-│                            │  │                            │
-│ FAISS / Semantic Search    │  │ Deterministic Python      │
-│ Policy Retrieval           │  │ Financial Calculations    │
-└──────────────┬─────────────┘  └──────────────┬─────────────┘
-               │                               │
-               └───────────────┬───────────────┘
-                               │
-                               ▼
-┌─────────────────────────────────────────────────────────────┐
-│              4. Underwriting Assessment                    │
-│       Policy Evaluation • Risk Findings • Conditions       │
-└─────────────────────────────┬───────────────────────────────┘
-                              │
-                              ▼
-┌─────────────────────────────────────────────────────────────┐
-│              5. Evidence & Citation Review                 │
-│       Source Validation • Traceability • Auditability      │
-└─────────────────────────────┬───────────────────────────────┘
-                              │
-                              ▼
-┌─────────────────────────────────────────────────────────────┐
-│          Underwriting Transmittal Report & HUD             │
-└─────────────────────────────────────────────────────────────┘
+                 ┌──────────────────────────────┐
+                 │   Borrower Loan Package      │
+                 │      ZIP / Multiple Files    │
+                 └──────────────┬───────────────┘
+                                │
+                                ▼
+                 ┌──────────────────────────────┐
+                 │ 1. Document Processing       │
+                 │                              │
+                 │ Ingestion                    │
+                 │ Normalisation                │
+                 │ Fact Extraction              │
+                 └──────────────┬───────────────┘
+                                │
+                   ┌────────────┴────────────┐
+                   │                         │
+                   ▼                         ▼
+        ┌─────────────────────┐   ┌─────────────────────┐
+        │ 2. Guideline RAG    │   │ 3. Calculation      │
+        │                     │   │    Engine            │
+        │ FAISS / Semantic    │   │                     │
+        │ Search              │   │ Deterministic       │
+        │                     │   │ Python Calculations │
+        └──────────┬──────────┘   └──────────┬──────────┘
+                   │                         │
+                   └────────────┬────────────┘
+                                │
+                                ▼
+                 ┌──────────────────────────────┐
+                 │ 4. Underwriting Assessment   │
+                 │                              │
+                 │ Policy Evaluation            │
+                 │ Risk Findings                │
+                 │ Draft Conditions             │
+                 └──────────────┬───────────────┘
+                                │
+                                ▼
+                 ┌──────────────────────────────┐
+                 │ 5. Evidence & Citation       │
+                 │    Review                    │
+                 │                              │
+                 │ Source Validation             │
+                 │ Traceability                  │
+                 │ Auditability                  │
+                 └──────────────┬───────────────┘
+                                │
+                                ▼
+                 ┌──────────────────────────────┐
+                 │ Underwriting Report / HUD    │
+                 └──────────────────────────────┘
 ```
 
 ---
 
 ## Core Modules
 
-| Module                      | Responsibility                                                                                                                                      |
-| --------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `src/document_processor.py` | Ingests borrower packages including PDF, TXT, MD and ZIP files; normalises text and extracts relevant financial facts.                              |
-| `src/guideline_rag.py`      | Performs semantic underwriting guideline retrieval using FAISS vector search, with TF-IDF fallback and metadata-aware chunking.                     |
-| `src/calculations.py`       | Deterministic financial calculation engine for DTI, base monthly income, housing expense ratios and required closing funds.                         |
-| `src/discrepancy_engine.py` | Reconciles information across applications, W-2s, paystubs and bank statements to identify mismatches, unexplained deposits and documentation gaps. |
-| `src/underwriting.py`       | Orchestrates the underwriting assessment and synthesises policy rules, extracted facts and discrepancies into draft conditions.                     |
-| `src/llm.py`                | Integrates with the Groq API, using `llama-3.3-70b-versatile` by default for structured reasoning and assessment.                                   |
-| `src/database.py`           | Provides SQLite persistence for underwriting runs and audit information.                                                                            |
-| `src/models.py`             | Defines Pydantic models used for structured state management and auditability.                                                                      |
+| Module                      | Responsibility                                                                                                                   |
+| --------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
+| `src/document_processor.py` | Ingests borrower packages including PDF, TXT, MD and ZIP files; normalises text and extracts financial facts.                    |
+| `src/guideline_rag.py`      | Retrieves relevant underwriting guidelines using FAISS semantic search with TF-IDF fallback.                                     |
+| `src/calculations.py`       | Performs deterministic calculations including DTI, monthly income, housing expenses and closing funds.                           |
+| `src/discrepancy_engine.py` | Reconciles information across applications, W-2s, paystubs and bank statements to identify discrepancies and documentation gaps. |
+| `src/underwriting.py`       | Orchestrates the underwriting assessment and generates draft conditions from policy rules and findings.                          |
+| `src/llm.py`                | Handles Groq API integration and structured LLM reasoning.                                                                       |
+| `src/database.py`           | Provides SQLite persistence for underwriting runs and audit information.                                                         |
+| `src/models.py`             | Defines Pydantic models for structured application state and auditability.                                                       |
 
 ---
 
-## Directory Structure
+## Project Structure
 
 ```text
-.
-├── app.py                         # Streamlit application and executive HUD
+underwriterAI/
+│
+├── app.py
 │
 ├── data/
-│   ├── demo/                      # Synthetic test packages and borrower documents
+│   ├── demo/
 │   │   ├── 01_application.txt
 │   │   ├── ...
 │   │   ├── 14_application_correction.txt
-│   │   ├── initial_package/       # Package containing known discrepancies
-│   │   └── revised_package/       # Package resolving identified conditions
+│   │   ├── initial_package/
+│   │   └── revised_package/
 │   │
-│   ├── guidelines/                # Underwriting rules and policy documents
-│   └── underwriter.db             # Persistent audit database
+│   ├── guidelines/
+│   └── underwriter.db
 │
-├── src/                           # Application modules and engines
+├── src/
+│   ├── document_processor.py
+│   ├── guideline_rag.py
+│   ├── calculations.py
+│   ├── discrepancy_engine.py
+│   ├── underwriting.py
+│   ├── llm.py
+│   ├── database.py
+│   └── models.py
 │
-├── tests/                         # Unit and integration tests
+├── tests/
 │
-├── packages.txt                   # System-level dependencies
-├── pytest.ini                     # Pytest configuration
-├── requirements.txt               # Python dependencies
+├── .env.example
+├── .gitignore
+├── LICENSE
+├── packages.txt
+├── pytest.ini
+├── requirements.txt
 └── README.md
 ```
 
@@ -102,17 +143,17 @@ The platform processes multi-document borrower loan packages, extracts and recon
 
 ## Quickstart
 
-### Prerequisites
+### Requirements
 
-* Python **3.12**
-* A **Groq API key**
+* Python 3.12
 * Git
+* Groq API key
 
-### 1. Clone the Repository
+### 1. Clone
 
 ```bash
-git clone https://github.com/abdur-rahman-tech/mortgage-underwriting-assistant.git
-cd mortgage-underwriting-assistant
+git clone https://github.com/sobanmujtaba/underwriterAI.git
+cd underwriterAI
 ```
 
 ### 2. Create a Virtual Environment
@@ -135,7 +176,7 @@ pip install --upgrade pip
 pip install -r requirements.txt
 ```
 
-For dense vector search, install the optional FAISS and Sentence Transformers dependencies:
+For dense vector retrieval:
 
 ```bash
 pip install faiss-cpu sentence-transformers
@@ -153,9 +194,9 @@ POLICY_PROGRAM=synthetic_conventional_salaried
 POLICY_EFFECTIVE_DATE=2026-10-01
 ```
 
-> **Note:** The included policy data is synthetic and intended for demonstration and testing purposes.
+> The included policy data and borrower scenarios are synthetic and intended for demonstration and testing.
 
-### 5. Run the Test Suite
+### 5. Run Tests
 
 ```bash
 pytest tests/
@@ -167,7 +208,7 @@ pytest tests/
 streamlit run app.py
 ```
 
-The application will be available at:
+The Streamlit application will be available at:
 
 ```text
 http://localhost:8501
@@ -177,11 +218,15 @@ http://localhost:8501
 
 ## Demonstration Scenarios
 
-The `data/demo/` directory contains synthetic borrower packages designed to demonstrate discrepancy detection and condition resolution.
+The repository includes synthetic borrower packages for demonstrating discrepancy detection and condition resolution.
 
 ### Scenario A — Discrepancy Detection
 
-**Package:** `data/demo/initial_package/`
+Package:
+
+```text
+data/demo/initial_package/
+```
 
 Upload:
 
@@ -197,9 +242,7 @@ or the individual fixtures:
 07_credit_report_summary.txt
 ```
 
-#### Expected Behaviour
-
-UnderwriteOS identifies several underwriting issues:
+The system demonstrates detection of:
 
 * **Base income mismatch**
 
@@ -214,13 +257,17 @@ UnderwriteOS identifies several underwriting issues:
 
   * A **$15,000** bank deposit lacks an acceptable source.
 
-The system converts these findings into evidence-backed draft underwriting conditions.
+These findings are converted into draft underwriting conditions for human review.
 
 ---
 
 ### Scenario B — Condition Resolution
 
-**Package:** `data/demo/revised_package/`
+Package:
+
+```text
+data/demo/revised_package/
+```
 
 Upload:
 
@@ -235,15 +282,14 @@ or include:
 14_application_correction.txt
 ```
 
-#### Expected Behaviour
+The revised package demonstrates resolution of the previously identified issues:
 
-The revised package resolves the previously identified discrepancies:
+* Corrected base income: **$8,000.00/month**
+* Bonus income excluded from qualifying income
+* $15,000 deposit sourced to verified personal savings
+* Total monthly debt obligations: **$3,350.00**
 
-* Corrected base income is validated at **$8,000.00/month**.
-* Bonus income is excluded from qualifying income.
-* The **$15,000 deposit** is sourced to verified personal savings.
-* Total monthly debt obligations are verified at **$3,350.00**.
-* Deterministic illustrative DTI is calculated as:
+The deterministic calculation engine produces:
 
 ```text
 $3,350 / $8,000 × 100 = 41.875%
@@ -253,49 +299,66 @@ $3,350 / $8,000 × 100 = 41.875%
 
 ---
 
-## Design Principles
+## Key Design Principles
 
 ### Deterministic Financial Calculations
 
-Financial calculations are deliberately separated from LLM reasoning.
+Financial arithmetic is intentionally handled outside the LLM.
 
-The calculation engine performs operations such as:
+The calculation engine is responsible for:
 
 * Base income calculations
-* Debt-to-income ratio calculations
+* Debt-to-income ratios
 * Housing expense calculations
 * Closing-fund calculations
 
-This reduces the risk of an LLM producing arithmetic errors.
-
-### Evidence-Based Findings
-
-Underwriting findings are intended to be traceable to source documents and retrieved policy guidance rather than being generated solely from model assumptions.
+This helps prevent arithmetic errors that can occur when financial calculations are delegated to an LLM.
 
 ### Retrieval-Augmented Guideline Validation
 
-The RAG layer retrieves relevant policy material before underwriting assessment, allowing the system to associate findings and conditions with the applicable synthetic guideline context.
+The RAG layer retrieves relevant policy material before the underwriting assessment, allowing findings to be evaluated against the applicable synthetic guideline context.
+
+### Evidence-Based Findings
+
+Underwriting findings are designed to remain traceable to the underlying borrower documents and retrieved policy guidance.
 
 ### Human Oversight
 
-The system is designed as **decision support**, not autonomous underwriting.
+The system provides underwriting **decision support**, not autonomous underwriting.
 
-A human underwriter remains responsible for reviewing the evidence, validating the findings and making the final lending decision.
+A qualified human underwriter remains responsible for reviewing the evidence, validating findings and making the final lending decision.
 
 ---
 
 ## Technology Stack
 
-* **Python 3.12**
-* **Streamlit** — Web application interface
-* **Groq API** — LLM inference
-* **Llama 3.3 70B** — Default reasoning model
-* **FAISS** — Vector similarity search
-* **Sentence Transformers** — Embeddings
-* **TF-IDF** — Retrieval fallback
-* **Pydantic** — Structured data models
-* **SQLite** — Run and audit persistence
-* **Pytest** — Automated testing
+| Technology                | Purpose                               |
+| ------------------------- | ------------------------------------- |
+| **Python 3.12**           | Core application                      |
+| **Streamlit**             | Web interface                         |
+| **Groq API**              | LLM inference                         |
+| **Llama 3.3 70B**         | Default reasoning model               |
+| **FAISS**                 | Vector similarity search              |
+| **Sentence Transformers** | Embeddings                            |
+| **TF-IDF**                | Retrieval fallback                    |
+| **Pydantic**              | Data validation and structured models |
+| **SQLite**                | Persistence and audit tracking        |
+| **Pytest**                | Testing                               |
+
+---
+
+## Attribution
+
+This repository is based on the original **Mortgage Underwriting Assistant / UnderwriteOS** project created by **Abdur Rehman**.
+
+Original project:
+
+**Abdur Rehman**
+`https://github.com/abdur-rahman-tech/mortgage-underwriting-assistant`
+
+This repository represents my own version, adaptation and development of the project for my portfolio and experimentation.
+
+Credit and attribution are retained to acknowledge the original creator and source project.
 
 ---
 
@@ -305,10 +368,12 @@ UnderwriteOS is a **demonstration and decision-support system**.
 
 The included borrower documents, underwriting policies and financial scenarios are synthetic. The system is not intended to replace a qualified mortgage underwriter, lender compliance process, legal review or applicable regulatory requirements.
 
-No output from UnderwriteOS should be interpreted as a final credit decision, approval, denial, adverse action notice or clear-to-close determination.
+No output from this application should be interpreted as a final credit decision, loan approval, denial, adverse action notice or clear-to-close determination.
 
 ---
 
 ## License
 
 Distributed under the **MIT License**.
+
+See [`LICENSE`](LICENSE) for details.
